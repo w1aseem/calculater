@@ -168,3 +168,43 @@ def log_custom(x, base):
 
     else:
         math.log(x, base)
+
+
+# menu
+def menu():
+    print("\nselect operation.")
+    print("1.Add")
+    print("2.subtract")
+    print("3.multiply")
+    print("4.divide")
+    print("5.exponent")
+    print("6.modulus")
+    print("7.square root")
+    print("8.floor divide(x//y)")
+    print("9.log base 10")
+    print("10.natural log (ln)")
+    print("11.sine (degrees)")
+    print("12.cosine (degrees)")
+    print("13. tanget (degrees)")
+    print("14.factorial")
+    print("15.absolute value")
+    print("16.power of 10 (10^x)")
+    print("17.convert to radians")
+    print("18.convert to degrees")
+    print("19.sign function")
+    print("20.clamp value")
+    print("21.percentage")
+    print("22.gcd")
+    print("23.lcm")
+    print("24.log with custom base")
+    print("25.sinh")
+    print("26.cosh")
+    print("27.tanh")
+    print("28.asin")
+    print("29.acos")
+    print("30.atan")
+    print("31.exit")
+
+    choice = input("\nEnter choice(1-31):")
+
+    # single input operations
