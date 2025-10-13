@@ -1,210 +1,353 @@
+"""A small scientific calculator module with input validation, a console menu,
+and helper hooks for GUI integration.
+
+This refactor fixes logic issues, adds validation and error handling, and
+provides a clearer structure for extending (e.g. tkinter GUI).
+"""
+
+from __future__ import annotations
+
 import math
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 
-def add(x, y):
-    return x + y
+Number = Union[int, float]
 
 
-def subtract(x, y):
-    return x - y
+def add(x: Number, y: Number) -> float:
+    return float(x + y)
 
 
-def multiply(x, y):
-    return x * y
+def subtract(x: Number, y: Number) -> float:
+    return float(x - y)
 
 
-def divide(x, y):
+def multiply(x: Number, y: Number) -> float:
+    return float(x * y)
+
+
+def divide(x: Number, y: Number) -> float:
     if y == 0:
-        return "Error! Division by zero."
-    else:
-        return x / y
+        raise ZeroDivisionError("Division by zero")
+    return float(x / y)
 
 
-def exponent(x, y):
-    return x**y
+def exponent(x: Number, y: Number) -> float:
+    return float(x**y)
 
 
-def modulus(x, y):
-    return x % y
-
-
-def floor_divide(x, y):
+def modulus(x: Number, y: Number) -> float:
     if y == 0:
-        return "Error! Division by zero."
-    else:
-        return x // y
+        raise ZeroDivisionError("Modulus by zero")
+    return float(x % y)
 
 
-# single -input operations
+def floor_divide(x: Number, y: Number) -> int:
+    if y == 0:
+        raise ZeroDivisionError("Floor division by zero")
+    return int(x // y)
 
 
-def square_root(x):
+# single-input operations
+
+
+def square_root(x: Number) -> float:
     if x < 0:
-        return "cannot take square root of negative number"
-    else:
-        return math.sqrt(x)
+        raise ValueError("Square root of negative number")
+    return math.sqrt(x)
 
 
-def log10(x):
+def log10(x: Number) -> float:
     if x <= 0:
-        return "logarithm undefined for non-positive numbers"
-    else:
-        return math.log10(x)
+        raise ValueError("log10 undefined for non-positive numbers")
+    return math.log10(x)
 
 
-def natural_log(x):
+def natural_log(x: Number) -> float:
     if x <= 0:
-
-        return "natural log undefined for non -positive numbers"
-
-    else:
-        return math.log(x)
+        raise ValueError("ln undefined for non-positive numbers")
+    return math.log(x)
 
 
-def sine(x):
-    return math.sin(math.radians(x))
+def sine(x: Number) -> float:
+    # expects degrees
+    return math.sin(math.radians(float(x)))
 
 
-def cosine(x):
-    return math.cos(math.radians(x))
+def cosine(x: Number) -> float:
+    return math.cos(math.radians(float(x)))
 
 
-def tangent(x):
-    return math.tan(math.radians(x))
+def tangent(x: Number) -> float:
+    return math.tan(math.radians(float(x)))
 
 
-def factorial(x):
-    if x < 0:
-        return "factorial not defined for negative numbers"
-    else:
-        return math.factorial(x)
+def factorial(x: Number) -> int:
+    # math.factorial requires an integer >= 0
+    if not float(x).is_integer():
+        raise ValueError("factorial requires an integer value")
+    n = int(x)
+    if n < 0:
+        raise ValueError("factorial not defined for negative integers")
+    return math.factorial(n)
 
 
-def absolute(x):
+def absolute(x: Number) -> float:
     return abs(x)
 
 
-def power_of_ten(x):
-
-    return 10**x
-
-
-def radians(x):
-
-    return math.radians(x)
+def power_of_ten(x: Number) -> float:
+    return float(10**x)
 
 
-def degrees(x):
+def to_radians(x: Number) -> float:
+    return math.radians(float(x))
 
-    return math.degrees(x)
+
+def to_degrees(x: Number) -> float:
+    return math.degrees(float(x))
 
 
-def sign(x):
+def sign(x: Number) -> int:
     if x > 0:
         return 1
-    elif x < 0:
+    if x < 0:
         return -1
-    else:
-        return 0
+    return 0
 
 
-def sinh(x):
-
-    return math.sinh(x)
-
-
-def cosh(x):
-    return math.cosh(x)
+def sinh(x: Number) -> float:
+    return math.sinh(float(x))
 
 
-def tanh(x):
-    return math.tanh(x)
+def cosh(x: Number) -> float:
+    return math.cosh(float(x))
 
 
-def asin(x):
-    if -1 <= x <= 1:
-        return math.degrees(math.asin(x))
-    else:
-        return "involid input for asin"
+def tanh(x: Number) -> float:
+    return math.tanh(float(x))
 
 
-def acos(x):
-    if -1 <= x <= 1:
-        return math.degrees(math.acos(x))
-    else:
-        return "invalid input for acos"
+def asin(x: Number) -> float:
+    if x < -1 or x > 1:
+        raise ValueError("asin input must be in [-1, 1]")
+    # return degrees
+    return math.degrees(math.asin(float(x)))
 
 
-def atan(x):
-
-    return math.degrees(math.atan(x))
-
-
-# two-iinput operations
+def acos(x: Number) -> float:
+    if x < -1 or x > 1:
+        raise ValueError("acos input must be in [-1, 1]")
+    return math.degrees(math.acos(float(x)))
 
 
-def clamp(x, min_value, max_value):
-
-    return max(min(x, max_value), min_value)
-
-
-def percentage(x, precent):
-
-    return (x * precent) / 100
+def atan(x: Number) -> float:
+    return math.degrees(math.atan(float(x)))
 
 
-def gcd(x, y):
+# two-input and multi-input utilities
+
+
+def clamp(x: Number, min_value: Number, max_value: Number) -> float:
+    if min_value > max_value:
+        raise ValueError("min_value cannot be greater than max_value")
+    return float(max(min(x, max_value), min_value))
+
+
+def percentage(x: Number, percent: Number) -> float:
+    return float((x * percent) / 100.0)
+
+
+def gcd(x: Number, y: Number) -> int:
     return math.gcd(int(x), int(y))
 
 
-def lcm(x, y):
-    return abs(int(x) * int(y)) // math.gcd(int(x), int(y))
+def lcm(x: Number, y: Number) -> int:
+    a, b = int(x), int(y)
+    if a == 0 or b == 0:
+        return 0
+    return abs(a * b) // math.gcd(a, b)
 
 
-def log_custom(x, base):
+def log_custom(x: Number, base: Number) -> float:
     if x <= 0 or base <= 0 or base == 1:
-
-        return "logarithm undefined for non-positive numbers"
-
-    else:
-        math.log(x, base)
+        raise ValueError("log undefined for given x/base")
+    return math.log(x, base)
 
 
-# menu
-def menu():
-    print("\nselect operation.")
-    print("1.Add")
-    print("2.subtract")
-    print("3.multiply")
-    print("4.divide")
-    print("5.exponent")
-    print("6.modulus")
-    print("7.square root")
-    print("8.floor divide(x//y)")
-    print("9.log base 10")
-    print("10.natural log (ln)")
-    print("11.sine (degrees)")
-    print("12.cosine (degrees)")
-    print("13. tanget (degrees)")
-    print("14.factorial")
-    print("15.absolute value")
-    print("16.power of 10 (10^x)")
-    print("17.convert to radians")
-    print("18.convert to degrees")
-    print("19.sign function")
-    print("20.clamp value")
-    print("21.percentage")
-    print("22.gcd")
-    print("23.lcm")
-    print("24.log with custom base")
-    print("25.sinh")
-    print("26.cosh")
-    print("27.tanh")
-    print("28.asin")
-    print("29.acos")
-    print("30.atan")
-    print("31.exit")
+# Menu and input helpers
 
-    choice = input("\nEnter choice(1-31):")
 
-    # single input operations
+UNARY_OPS: Dict[str, Tuple[str, Callable[[Number], Number]]] = {
+    "7": ("square_root", square_root),
+    "9": ("log10", log10),
+    "10": ("ln", natural_log),
+    "11": ("sin (deg)", sine),
+    "12": ("cos (deg)", cosine),
+    "13": ("tan (deg)", tangent),
+    "14": ("factorial", factorial),
+    "15": ("abs", absolute),
+    "16": ("10^x", power_of_ten),
+    "17": ("to radians", to_radians),
+    "18": ("to degrees", to_degrees),
+    "19": ("sign", sign),
+    "25": ("sinh", sinh),
+    "26": ("cosh", cosh),
+    "27": ("tanh", tanh),
+    "28": ("asin (return deg)", asin),
+    "29": ("acos (return deg)", acos),
+    "30": ("atan (return deg)", atan),
+}
+
+
+BINARY_OPS: Dict[str, Tuple[str, Callable[..., Number]]] = {
+    "1": ("add", add),
+    "2": ("subtract", subtract),
+    "3": ("multiply", multiply),
+    "4": ("divide", divide),
+    "5": ("exponent", exponent),
+    "6": ("modulus", modulus),
+    "8": ("floor_divide", floor_divide),
+    "21": ("percentage", percentage),
+    "22": ("gcd", gcd),
+    "23": ("lcm", lcm),
+    "24": ("log base", log_custom),
+}
+
+
+def print_menu() -> None:
+    print("\nSelect operation:")
+    print("1. Add")
+    print("2. Subtract")
+    print("3. Multiply")
+    print("4. Divide")
+    print("5. Exponent")
+    print("6. Modulus")
+    print("7. Square root")
+    print("8. Floor divide (x // y)")
+    print("9. Log base 10")
+    print("10. Natural log (ln)")
+    print("11. Sine (degrees)")
+    print("12. Cosine (degrees)")
+    print("13. Tangent (degrees)")
+    print("14. Factorial")
+    print("15. Absolute value")
+    print("16. Power of 10 (10^x)")
+    print("17. Convert to radians")
+    print("18. Convert to degrees")
+    print("19. Sign function")
+    print("20. Clamp value")
+    print("21. Percentage")
+    print("22. GCD")
+    print("23. LCM")
+    print("24. Log with custom base")
+    print("25. Sinh")
+    print("26. Cosh")
+    print("27. Tanh")
+    print("28. Asin (input -1..1, returns degrees)")
+    print("29. Acos (input -1..1, returns degrees)")
+    print("30. Atan (returns degrees)")
+    print("31. Exit")
+
+
+def _parse_number(raw: str) -> Number:
+    # Try int first to preserve integers for factorial/gcd/lcm
+    try:
+        if raw.strip().lower().endswith("j"):
+            raise ValueError
+        iv = int(raw)
+        return iv
+    except Exception:
+        try:
+            return float(raw)
+        except Exception as exc:
+            raise ValueError(f"Invalid number: {raw}") from exc
+
+
+def get_input_number(prompt: str) -> Number:
+    raw = input(prompt)
+    return _parse_number(raw)
+
+
+def main() -> None:
+    history: List[str] = []
+    memory: Optional[Number] = None
+
+    while True:
+        print_menu()
+        choice = input(
+            "Enter choice (1-31). You can type 'm' to recall memory, 'h' to show history: "
+        ).strip()
+        if not choice:
+            continue
+        if choice.lower() == "h":
+            print("History:")
+            for idx, entry in enumerate(history[-20:], start=1):
+                print(f"{idx}. {entry}")
+            continue
+        if choice.lower() == "m":
+            print(f"Memory: {memory}")
+            continue
+        if choice == "31":
+            print("Goodbye")
+            break
+
+        try:
+            if choice in UNARY_OPS:
+                name, func = UNARY_OPS[choice]
+                raw = input(f"Enter number for {name}: ")
+                x = _parse_number(raw)
+                result = func(x)
+                print("Result:", result)
+                history.append(f"{name}({x}) = {result}")
+                memory = result
+                continue
+
+            if choice in BINARY_OPS:
+                name, func = BINARY_OPS[choice]
+                raw1 = input(f"Enter first number for {name}: ")
+                raw2 = input(f"Enter second number for {name}: ")
+                a = _parse_number(raw1)
+                b = _parse_number(raw2)
+                result = func(a, b)
+                print("Result:", result)
+                history.append(f"{name}({a}, {b}) = {result}")
+                memory = result
+                continue
+
+            if choice == "20":
+                raw = input("Enter number to be clamped: ")
+                raw_min = input("Enter minimum value: ")
+                raw_max = input("Enter maximum value: ")
+                x = _parse_number(raw)
+                mn = _parse_number(raw_min)
+                mx = _parse_number(raw_max)
+                result = clamp(x, mn, mx)
+                print("Result:", result)
+                history.append(f"clamp({x}, {mn}, {mx}) = {result}")
+                memory = result
+                continue
+
+            print("Unknown choice. Please select a valid option.")
+
+        except Exception as exc:  # catch validation/ValueError/ZeroDivisionError
+            print("Error:", exc)
+
+
+def get_operations_for_gui() -> Dict[str, Callable]:
+    """Return a flat mapping of operation names to callables for GUI integration.
+
+    Keys are descriptive strings suitable for button labels; values are callables
+    that accept the appropriate number of number arguments.
+    """
+    ops: Dict[str, Callable] = {}
+    for k, (name, func) in UNARY_OPS.items():
+        ops[name] = func
+    for k, (name, func) in BINARY_OPS.items():
+        ops[name] = func
+    ops["clamp"] = clamp
+    return ops
+
+
+if __name__ == "__main__":
+    main()
