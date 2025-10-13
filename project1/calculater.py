@@ -270,81 +270,151 @@ def get_input_number(prompt: str) -> Number:
     return _parse_number(raw)
 
 
-def main() -> None:
-    history: List[str] = []
-    memory: Optional[Number] = None
+class Calculator:
+    """Encapsulates calculator state (history, memory) and the interactive loop.
 
-    while True:
-        print_menu()
-        choice = input(
-            "Enter choice (1-32). You can type 'm' to recall memory, 'h' to show history: "
-        ).strip()
-        if not choice:
-            continue
-        if choice.lower() == "h":
-            print("History:")
-            for idx, entry in enumerate(history[-20:], start=1):
-                print(f"{idx}. {entry}")
-            continue
-        if choice.lower() == "m":
-            print(f"Memory: {memory}")
-            continue
-        if choice == "31":
-            print("Goodbye")
-            break
+    This keeps the module usable as both a script and an importable component for
+    GUI or tests.
+    """
 
+    def __init__(self) -> None:
+        self.history: List[str] = []
+        self.memory: Optional[Number] = None
+
+    def _show_history(self) -> None:
+        print("History:")
+        for idx, entry in enumerate(self.history[-50:], start=1):
+            print(f"{idx}. {entry}")
+
+    def _handle_unary(self, choice: str) -> None:
+        name, func = UNARY_OPS[choice]
+        raw = input(f"Enter number for {name}: ")
+        x = _parse_number(raw)
+        result = func(x)
+        print("Result:", result)
+        self.history.append(f"{name}({x}) = {result}")
+        self.memory = result
+
+    def _handle_binary(self, choice: str) -> None:
+        name, func = BINARY_OPS[choice]
+        raw1 = input(f"Enter first number for {name}: ")
+        raw2 = input(f"Enter second number for {name}: ")
+        a = _parse_number(raw1)
+        b = _parse_number(raw2)
+        result = func(a, b)
+        print("Result:", result)
+        self.history.append(f"{name}({a}, {b}) = {result}")
+        self.memory = result
+
+    def _handle_clamp(self) -> None:
+        raw = input("Enter number to be clamped: ")
+        raw_min = input("Enter minimum value: ")
+        raw_max = input("Enter maximum value: ")
+        x = _parse_number(raw)
+        mn = _parse_number(raw_min)
+        mx = _parse_number(raw_max)
+        result = clamp(x, mn, mx)
+        print("Result:", result)
+        self.history.append(f"clamp({x}, {mn}, {mx}) = {result}")
+        self.memory = result
+
+    def _handle_eval(self) -> None:
+        expr = input("Enter expression to evaluate: ")
         try:
-            if choice in UNARY_OPS:
-                name, func = UNARY_OPS[choice]
-                raw = input(f"Enter number for {name}: ")
-                x = _parse_number(raw)
-                result = func(x)
-                print("Result:", result)
-                history.append(f"{name}({x}) = {result}")
-                memory = result
+            result = evaluate_expression(expr, self.memory)
+        except Exception as exc:
+            print("Error evaluating expression:", exc)
+        else:
+            print("Result:", result)
+            self.history.append(f"eval({expr}) = {result}")
+            self.memory = result
+
+    def run(self) -> None:
+        while True:
+            print_menu()
+            choice = input(
+                "Enter choice (1-32). You can type 'm' to recall memory, 'h' to show history: "
+            ).strip()
+            if not choice:
                 continue
-
-            if choice in BINARY_OPS:
-                name, func = BINARY_OPS[choice]
-                raw1 = input(f"Enter first number for {name}: ")
-                raw2 = input(f"Enter second number for {name}: ")
-                a = _parse_number(raw1)
-                b = _parse_number(raw2)
-                result = func(a, b)
-                print("Result:", result)
-                history.append(f"{name}({a}, {b}) = {result}")
-                memory = result
+            if choice.lower() == "h":
+                self._show_history()
                 continue
-
-            if choice == "32":
-                expr = input("Enter expression to evaluate: ")
-                try:
-                    result = evaluate_expression(expr, memory)
-                except Exception as exc:
-                    print("Error evaluating expression:", exc)
-                else:
-                    print("Result:", result)
-                    history.append(f"eval({expr}) = {result}")
-                    memory = result
+            if choice.lower() == "m":
+                print(f"Memory: {self.memory}")
                 continue
+            if choice == "31":
+                print("Goodbye")
+                break
 
-            if choice == "20":
-                raw = input("Enter number to be clamped: ")
-                raw_min = input("Enter minimum value: ")
-                raw_max = input("Enter maximum value: ")
-                x = _parse_number(raw)
-                mn = _parse_number(raw_min)
-                mx = _parse_number(raw_max)
-                result = clamp(x, mn, mx)
-                print("Result:", result)
-                history.append(f"clamp({x}, {mn}, {mx}) = {result}")
-                memory = result
-                continue
+            try:
+                if choice in UNARY_OPS:
+                    self._handle_unary(choice)
+                    continue
 
-            print("Unknown choice. Please select a valid option.")
+                if choice in BINARY_OPS:
+                    self._handle_binary(choice)
+                    continue
 
-        except Exception as exc:  # catch validation/ValueError/ZeroDivisionError
-            print("Error:", exc)
+                if choice == "32":
+                    self._handle_eval()
+                    continue
+
+                if choice == "20":
+                    self._handle_clamp()
+                    continue
+
+                print("Unknown choice. Please select a valid option.")
+
+            except Exception as exc:  # catch validation/ValueError/ZeroDivisionError
+                print("Error:", exc)
+
+
+def launch_tkinter() -> None:
+    """Launch a minimal tkinter GUI for evaluating expressions.
+
+    This GUI is intentionally small: an entry for expressions, an Evaluate
+    button that uses the same safe evaluator, and a label that shows the result.
+    Use this as a starting point for a fuller calculator UI.
+    """
+    try:
+        import tkinter as tk
+    except Exception:
+        print("tkinter not available in this environment")
+        return
+
+    calc = Calculator()
+
+    root = tk.Tk()
+    root.title("Simple Calculator - Expression Eval")
+
+    expr_var = tk.StringVar()
+    result_var = tk.StringVar()
+
+    tk.Label(root, text="Expression:").grid(row=0, column=0, sticky="w")
+    tk.Entry(root, textvariable=expr_var, width=40).grid(row=0, column=1, columnspan=2)
+
+    def on_eval() -> None:
+        expr = expr_var.get()
+        try:
+            res = evaluate_expression(expr, calc.memory)
+        except Exception as e:
+            result_var.set(f"Error: {e}")
+        else:
+            result_var.set(str(res))
+            calc.history.append(f"eval({expr}) = {res}")
+            calc.memory = res
+
+    tk.Button(root, text="Evaluate", command=on_eval).grid(row=1, column=1)
+    tk.Label(root, textvariable=result_var, fg="blue").grid(row=1, column=2)
+
+    root.mainloop()
+
+
+def main() -> None:
+    """Compatibility main() function that runs the interactive calculator."""
+    calc = Calculator()
+    calc.run()
 
 
 def get_operations_for_gui() -> Dict[str, Callable]:
@@ -382,6 +452,36 @@ def _safe_math_namespace(memory: Optional[Number] = None) -> Dict[str, object]:
 
     # memory placeholder
     allowed["M"] = memory
+
+    # Provide degree-based trig helpers to match calculator behavior
+    def _sin_deg(x: Number) -> float:
+        return math.sin(math.radians(float(x)))
+
+    def _cos_deg(x: Number) -> float:
+        return math.cos(math.radians(float(x)))
+
+    def _tan_deg(x: Number) -> float:
+        return math.tan(math.radians(float(x)))
+
+    def _asin_deg(x: Number) -> float:
+        if x < -1 or x > 1:
+            raise ValueError("asin input must be in [-1, 1]")
+        return math.degrees(math.asin(float(x)))
+
+    def _acos_deg(x: Number) -> float:
+        if x < -1 or x > 1:
+            raise ValueError("acos input must be in [-1, 1]")
+        return math.degrees(math.acos(float(x)))
+
+    def _atan_deg(x: Number) -> float:
+        return math.degrees(math.atan(float(x)))
+
+    allowed["sin"] = _sin_deg
+    allowed["cos"] = _cos_deg
+    allowed["tan"] = _tan_deg
+    allowed["asin"] = _asin_deg
+    allowed["acos"] = _acos_deg
+    allowed["atan"] = _atan_deg
 
     return allowed
 
