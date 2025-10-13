@@ -248,6 +248,7 @@ def print_menu() -> None:
     print("29. Acos (input -1..1, returns degrees)")
     print("30. Atan (returns degrees)")
     print("31. Exit")
+    print("32. Evaluate full expression")
 
 
 def _parse_number(raw: str) -> Number:
@@ -276,7 +277,7 @@ def main() -> None:
     while True:
         print_menu()
         choice = input(
-            "Enter choice (1-31). You can type 'm' to recall memory, 'h' to show history: "
+            "Enter choice (1-32). You can type 'm' to recall memory, 'h' to show history: "
         ).strip()
         if not choice:
             continue
@@ -315,6 +316,18 @@ def main() -> None:
                 memory = result
                 continue
 
+            if choice == "32":
+                expr = input("Enter expression to evaluate: ")
+                try:
+                    result = evaluate_expression(expr, memory)
+                except Exception as exc:
+                    print("Error evaluating expression:", exc)
+                else:
+                    print("Result:", result)
+                    history.append(f"eval({expr}) = {result}")
+                    memory = result
+                continue
+
             if choice == "20":
                 raw = input("Enter number to be clamped: ")
                 raw_min = input("Enter minimum value: ")
@@ -347,6 +360,62 @@ def get_operations_for_gui() -> Dict[str, Callable]:
         ops[name] = func
     ops["clamp"] = clamp
     return ops
+
+
+def _safe_math_namespace(memory: Optional[Number] = None) -> Dict[str, object]:
+    """Create a safe namespace exposing math functions/constants and a few builtins.
+
+    Excludes any dunder names from math. Adds 'abs', 'round', and memory token 'M'.
+    """
+    allowed: Dict[str, object] = {}
+    for name, val in math.__dict__.items():
+        if not name.startswith("__"):
+            allowed[name] = val
+
+    # add safe builtins
+    allowed["abs"] = abs
+    allowed["round"] = round
+
+    # constants alias
+    allowed["pi"] = math.pi
+    allowed["e"] = math.e
+
+    # memory placeholder
+    allowed["M"] = memory
+
+    return allowed
+
+
+def evaluate_expression(expr: str, memory: Optional[Number] = None) -> Number:
+    """Safely evaluate a math expression using a restricted globals mapping.
+
+    The expression may use functions from the math module (sin, cos, sqrt, etc.),
+    builtins abs() and round(), and constants pi/e. The memory variable 'M' is
+    available to insert the last result.
+
+    Security: eval() is called with {'__builtins__': None} and a curated globals dict.
+    """
+    if not isinstance(expr, str) or not expr.strip():
+        raise ValueError("Empty expression")
+
+    safe_globals = {"__builtins__": None}
+    safe_globals.update(_safe_math_namespace(memory))
+
+    # Locals are empty to prevent access to outer scope
+    try:
+        # Evaluate the expression
+        result = eval(expr, safe_globals, {})
+    except Exception as exc:
+        # Re-raise common errors with clearer messages
+        raise ValueError(f"Error evaluating expression: {exc}") from exc
+
+    if isinstance(result, (int, float)):
+        return result
+    # allow results that can be converted to float
+    try:
+        return float(result)
+    except Exception:
+        raise ValueError("Expression did not evaluate to a numeric result")
 
 
 if __name__ == "__main__":
